@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/html"
 	"log"
 	"net/http"
+	"sync"
 )
 
 type HrefList []string
@@ -20,7 +21,8 @@ func (l *HrefList) addToHrefList(href string) bool {
 	return true
 }
 
-func reciprocalScrape(url string, inDomain *HrefList, outDomain *HrefList) error {
+func reciprocalScrape(url string, inDomain *HrefList, wg *sync.WaitGroup) error {
+	defer wg.Done()
 	hrefs, err := getHrefsFromUrl(url)
 	if err != nil {
 		return err
@@ -30,17 +32,11 @@ func reciprocalScrape(url string, inDomain *HrefList, outDomain *HrefList) error
 		if href == "/" || href == "#" {
 			continue
 		} else if href[0:1] != "/" {
-			outDomain.addToHrefList(href)
+			fmt.Printf("External href found: %s\n", href)
 		} else {
-			if ok := inDomain.addToHrefList(href); ok {
-				err := reciprocalScrape(fmt.Sprintf("%s%s", url, href), inDomain, outDomain)
-				if err != nil {
-					return err
-				}
-			}
+			inDomain.addToHrefList(href)
 		}
 	}
-
 	return nil
 }
 

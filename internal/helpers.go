@@ -1,15 +1,36 @@
-package internal
+package app
 
 import (
-	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 )
 
-type HrefList []string
+func validateURL(input string) error {
+	_, err := url.ParseRequestURI(input)
+	return err
+}
+
+func reciprocalScrape(url string, inDomain *[]string, outDomain *[]string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	hrefs, err := getHrefsFromUrl(url)
+	if err != nil {
+		log.Fatalf("Error within goroutine: %s", err.Error())
+	}
+
+	for _, href := range hrefs {
+		if href == "/" || href == "#" {
+			continue
+		} else if href[0:1] != "/" {
+			*outDomain = append(*outDomain, href)
+		} else {
+			*inDomain = append(*inDomain, href)
+		}
+	}
+}
 
 func (l *HrefList) addToHrefList(href string) bool {
 	for _, x := range *l {
@@ -19,25 +40,6 @@ func (l *HrefList) addToHrefList(href string) bool {
 	}
 	*l = append(*l, href)
 	return true
-}
-
-func reciprocalScrape(url string, inDomain *HrefList, wg *sync.WaitGroup) error {
-	defer wg.Done()
-	hrefs, err := getHrefsFromUrl(url)
-	if err != nil {
-		return err
-	}
-
-	for _, href := range hrefs {
-		if href == "/" || href == "#" {
-			continue
-		} else if href[0:1] != "/" {
-			fmt.Printf("External href found: %s\n", href)
-		} else {
-			inDomain.addToHrefList(href)
-		}
-	}
-	return nil
 }
 
 func getHrefsFromUrl(url string) ([]string, error) {
@@ -58,7 +60,7 @@ func getHrefsFromUrl(url string) ([]string, error) {
 		return output, err
 	}
 
-	doc.Find("a").Each(func(i int, s *goquery.Selection) {
+	doc.Find("*").Each(func(i int, s *goquery.Selection) {
 		for _, node := range s.Nodes {
 			if href, ok := getHrefFromNode(node); ok {
 				output = append(output, href)

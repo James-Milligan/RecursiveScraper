@@ -1,54 +1,69 @@
-package internal
+package app
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
-func Scrape(url string) (HrefList, error) {
-	var wg sync.WaitGroup
+type HrefList []string
 
-	cycleOutputIn := HrefList{}
-	masterOutputIn := HrefList{}
-	toCycle := HrefList{}
-
-	wg.Add(1)
-	if err := reciprocalScrape(url, &cycleOutputIn, &wg); err != nil {
-		panic(err)
-	}
-	wg.Wait()
-
-	masterOutputIn.addNewToMaster(cycleOutputIn, &toCycle)
-
-	for true {
-		fmt.Println("Cycle...")
-		for _, x := range toCycle {
-			wg.Add(1)
-			go reciprocalScrape(fmt.Sprintf("%s%s", url, x), &cycleOutputIn, &wg)
-		}
-		wg.Wait()
-		toCycle = HrefList{}
-		masterOutputIn.addNewToMaster(cycleOutputIn, &toCycle)
-		if len(toCycle) == 0 {
-			break
-		}
-	}
-
-	return masterOutputIn, nil
+type Output struct {
+	Url           string   `json:"url"`
+	Pages         HrefList `json:"pages"`
+	ExternalPages HrefList `json:"-"`
 }
 
-func (l *HrefList) addNewToMaster(cycleOutput HrefList, nextCycle *HrefList) {
-	for _, x := range cycleOutput {
-		in := false
-		for _, y := range *l {
-			if x == y {
-				in = true
-				break
+func ScrapeURL(url string) Output {
+	var wg sync.WaitGroup
+
+	if err := validateURL(url); err != nil {
+		log.Fatal(err)
+	}
+
+	nextCycle := []string{""}
+	inDomainCycleOutput := []string{}
+	outDomainCycleOutput := []string{}
+
+	masterOutputIn := HrefList{}
+	masterOutputOut := HrefList{}
+
+	firstRun := true
+
+	for len(nextCycle) != 0 || firstRun == true {
+
+		if firstRun {
+			firstRun = false
+		}
+
+		inDomainCycleOutput = []string{}
+		outDomainCycleOutput = []string{}
+
+		for _, x := range nextCycle {
+			wg.Add(1)
+			go reciprocalScrape(fmt.Sprintf("%s%s", url, x), &inDomainCycleOutput, &outDomainCycleOutput, &wg)
+		}
+		wg.Wait()
+
+		nextCycle = []string{}
+		for _, href := range inDomainCycleOutput {
+			if ok := masterOutputIn.addToHrefList(href); ok {
+				nextCycle = append(nextCycle, href)
 			}
 		}
-		if !in {
-			*l = append(*l, x)
-			*nextCycle = append(*nextCycle, x)
+		for _, href := range outDomainCycleOutput {
+			masterOutputOut.addToHrefList(href)
 		}
+
+	}
+
+	for i, x := range masterOutputIn {
+		masterOutputIn[i] = fmt.Sprintf("%s%s", url, x)
+	}
+
+	return Output{
+		Url:           url,
+		Pages:         masterOutputIn,
+		ExternalPages: masterOutputOut,
 	}
 }

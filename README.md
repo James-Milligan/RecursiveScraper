@@ -13,7 +13,7 @@ and all pages and resources sitting under the starting domain are written to a j
 
 **Build:**
 ```
-go build -o search
+go build -o scrape
 ```
 
 **Arguments:**

@@ -8,7 +8,7 @@ same page from being visited twice by cross-referencing after each step, effecti
 depth-first search on the provided website.
 
 Only pages under the starting domain extend the search, and the program will continue down each branch
-until no new pages are found. once the program has completed all external links are printed to the console
+until no new pages are found. Once the program has completed all external links are printed to the console
 and all pages and resources sitting under the starting domain are written to a json file.
 
 **Build:**

@@ -31,6 +31,7 @@ func main() {
 		fmt.Println("No output path provided, will save output to output.json")
 	}
 
+	fmt.Printf("---\nScraping %s\n", *url)
 	results := app.ScrapeURL(*url)
 
 	fmt.Printf("Scrape complete.\n%d pages found app to the domain\n%d pages found external to the domain\n---\n",
@@ -40,6 +41,7 @@ func main() {
 	for x, o := range results.ExternalPages {
 		fmt.Printf("External link %d: %s \n", x+1, o)
 	}
+	fmt.Println("---")
 
 	fmt.Printf("Saving all pages within domain to %s\n", *path)
 	file, _ := json.MarshalIndent(results, "", " ")

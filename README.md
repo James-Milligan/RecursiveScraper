@@ -3,7 +3,7 @@
 This repository contains a web scraper written in Go using the goquery package. Compiles to a command
 line tool which takes 2 arguments, a starting URL and a target file location for the json output.
 
-The program concurrently steps through a website form a starting domain, preventing the
+The program concurrently steps through a website from a starting domain, preventing the
 same page from being visited twice by cross-referencing after each step, effectively performing a
 depth-first search on the provided website.
 

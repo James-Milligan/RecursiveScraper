@@ -14,12 +14,15 @@ func validateURL(input string) error {
 	return err
 }
 
-func reciprocalScrape(url string, inDomain *[]string, outDomain *[]string, wg *sync.WaitGroup) {
+func StepThroughURL(url string, inDomain *[]string, outDomain *[]string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	hrefs, err := getHrefsFromUrl(url)
+
+	doc, err := GetDocumentFromUrl(url)
 	if err != nil {
 		log.Fatalf("Error within goroutine: %s", err.Error())
 	}
+
+	hrefs := GetHrefsFromDocument(*doc)
 
 	for _, href := range hrefs {
 		if href == "/" || href == "#" {
@@ -32,7 +35,7 @@ func reciprocalScrape(url string, inDomain *[]string, outDomain *[]string, wg *s
 	}
 }
 
-func (l *HrefList) addToHrefList(href string) bool {
+func (l *HrefList) AddToHrefList(href string) bool {
 	for _, x := range *l {
 		if x == href {
 			return false
@@ -42,23 +45,23 @@ func (l *HrefList) addToHrefList(href string) bool {
 	return true
 }
 
-func getHrefsFromUrl(url string) ([]string, error) {
-	output := []string{}
-
+func GetDocumentFromUrl(url string) (*goquery.Document, error) {
+	output := goquery.Document{}
 	res, err := http.Get(url)
 	if err != nil {
-		return output, err
+		return &output, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-		return output, err
+		return &output, err
 	}
 
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return output, err
-	}
+	return goquery.NewDocumentFromReader(res.Body)
+}
+
+func GetHrefsFromDocument(doc goquery.Document) []string {
+	output := []string{}
 
 	doc.Find("*").Each(func(i int, s *goquery.Selection) {
 		for _, node := range s.Nodes {
@@ -68,8 +71,7 @@ func getHrefsFromUrl(url string) ([]string, error) {
 		}
 	})
 
-	return output, nil
-
+	return output
 }
 
 func getHrefFromNode(node *html.Node) (string, bool) {

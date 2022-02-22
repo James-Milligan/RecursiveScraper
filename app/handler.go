@@ -41,18 +41,18 @@ func ScrapeURL(url string) Output {
 
 		for _, x := range nextCycle {
 			wg.Add(1)
-			go reciprocalScrape(fmt.Sprintf("%s%s", url, x), &inDomainCycleOutput, &outDomainCycleOutput, &wg)
+			go StepThroughURL(fmt.Sprintf("%s%s", url, x), &inDomainCycleOutput, &outDomainCycleOutput, &wg)
 		}
 		wg.Wait()
 
 		nextCycle = []string{}
 		for _, href := range inDomainCycleOutput {
-			if ok := masterOutputIn.addToHrefList(href); ok {
+			if ok := masterOutputIn.AddToHrefList(href); ok {
 				nextCycle = append(nextCycle, href)
 			}
 		}
 		for _, href := range outDomainCycleOutput {
-			masterOutputOut.addToHrefList(href)
+			masterOutputOut.AddToHrefList(href)
 		}
 
 	}
